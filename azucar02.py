@@ -28,15 +28,21 @@ with st.sidebar:
     
     st.divider()
     
+    # CUADRO DE INFORMACIÓN DEL PACIENTE
     st.header("👤 Ficha del Paciente")
     with st.container(border=True):
         st.write(f"**Nombre:** Armando Valencia Maldonado")
         st.write(f"**Edad:** {edad} años")
         
         if not df.empty:
+            # Asegurar que el nivel sea numérico
             df['Nivel'] = pd.to_numeric(df['Nivel'], errors='coerce').fillna(0)
-            ultima_toma = int(df['Nivel'].iloc[-1])
+            ultimo_registro = df.iloc[-1]
+            ultima_toma = int(ultimo_registro['Nivel'])
+            
             st.write(f"**Última Glucosa:** {ultima_toma} mg/dL")
+            # NUEVO: Fecha y hora de la última medición bajo el nivel
+            st.markdown(f"<p style='font-size: 12px; color: gray; margin-top: -15px;'>Registrada: {ultimo_registro['Fecha']} a las {ultimo_registro['Hora']}</p>", unsafe_allow_html=True)
         
         st.write("**Contacto Emergencia:**")
         st.code("66311963", language=None)
@@ -52,11 +58,11 @@ if not df.empty:
     ultima_toma = int(df['Nivel'].iloc[-1])
     
     if ultima_toma <= 105:
-        color_titulo = "#3498db"
+        color_titulo = "#3498db" # Azul
     elif 106 <= ultima_toma <= 140:
-        color_titulo = "#27ae60"
+        color_titulo = "#27ae60" # Verde
     else:
-        color_titulo = "#e74c3c"
+        color_titulo = "#e74c3c" # Rojo
     
     st.markdown(f"<h1>{titulo_base} - <span style='color:{color_titulo}'>{ultima_toma} mg/dL</span></h1>", unsafe_allow_html=True)
 else:
@@ -119,30 +125,25 @@ if not df.empty:
     mask = (df['Fecha_dt'].dt.date >= fecha_inicio) & (df['Fecha_dt'].dt.date <= fecha_fin)
     df_filtrado = df.loc[mask].copy()
 
-    # --- TABLA DE ESTADÍSTICAS CON SUBTÍTULOS ---
+    # --- TABLA DE ESTADÍSTICAS ---
     st.subheader("📊 Resumen de Estadísticas")
     if not df_filtrado.empty:
         promedio = int(round(df_filtrado["Nivel"].mean()))
         
-        # Datos Máxima
         fila_max = df_filtrado.loc[df_filtrado["Nivel"].idxmax()]
         max_valor = int(fila_max["Nivel"])
         max_info = f"{fila_max['Fecha']} - {fila_max['Momento']}"
         
-        # Datos Mínima
         fila_min = df_filtrado.loc[df_filtrado["Nivel"].idxmin()]
         min_valor = int(fila_min["Nivel"])
         min_info = f"{fila_min['Fecha']} - {fila_min['Momento']}"
 
-        # Fila de métricas
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Promedio", f"{promedio} mg/dL")
         m2.metric("Máxima", f"{max_valor} mg/dL")
         m3.metric("Mínima", f"{min_valor} mg/dL")
         m4.metric("Registros", len(df_filtrado))
         
-        # Fila de subtítulos (Letra pequeña abajo de las métricas)
-        # Usamos st.markdown con HTML para el tamaño de letra
         c1, c2, c3, c4 = st.columns(4)
         with c2:
             st.markdown(f"<p style='font-size: 13px; color: gray; margin-top: -20px;'>{max_info}</p>", unsafe_allow_html=True)
