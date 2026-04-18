@@ -48,7 +48,7 @@ with st.sidebar:
         st.code("66311963", language=None)
     
     st.divider()
-    st.caption("Sistema de monitoreo personalizado.")
+    st.caption("Sistema de monitoreo personalizado Vangod 2026.")
 
 # --- LÓGICA PARA EL TÍTULO DINÁMICO ---
 nombre_paciente = "Armando Valencia Maldonado"
