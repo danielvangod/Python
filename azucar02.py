@@ -9,13 +9,13 @@ import time
 zona_gt = pytz.timezone('America/Guatemala')
 ahora_gt = datetime.now(zona_gt)
 
-st.set_page_config(page_title="Control Glucosa GT", page_icon="🩸")
+st.set_page_config(page_title="Bítacora de Glucosa", page_icon="🩸")
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-st.title("Control de Glucosa - Guatemala 🇬🇹")
+st.title("Control de Glucosa, Paciente: Armando Valencia")
 
 # --- FORMULARIO DE REGISTRO ---
 with st.form("registro_glucosa"):
