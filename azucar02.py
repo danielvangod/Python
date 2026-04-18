@@ -25,12 +25,12 @@ with st.form("registro_glucosa"):
     with col1:
         fecha = st.date_input("Fecha", ahora_gt.date())
     with col2:
+        # El selector de Streamlit sigue siendo funcional, el formato cambia al guardar
         hora = st.time_input("Hora", ahora_gt.time())
     with col3:
         momento = st.selectbox("Momento de la toma", 
                               ["Ayunas", "Antes de comer", "Después de comer (2h)", "Antes de dormir", "Otro"])
     
-    # Usamos step=1 para que el selector solo sugiera enteros
     nivel = st.number_input("Nivel de azúcar (mg/dL)", min_value=0, step=1)
     
     btn_guardar = st.form_submit_button("Guardar en la Nube")
@@ -38,9 +38,10 @@ with st.form("registro_glucosa"):
     if btn_guardar:
         nuevo_dato = pd.DataFrame({
             "Fecha": [fecha.strftime("%d/%m/%Y")],
-            "Hora": [hora.strftime("%H:%M")],
+            # CAMBIO AQUÍ: %I es hora 1-12, %M minutos, %p es AM/PM
+            "Hora": [hora.strftime("%I:%M %p")], 
             "Momento": [momento],
-            "Nivel": [int(round(nivel))] # Redondeamos al guardar
+            "Nivel": [int(round(nivel))]
         })
         
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
@@ -59,10 +60,7 @@ with st.form("registro_glucosa"):
 st.divider()
 
 if not df.empty:
-    # Aseguramos que la columna Nivel sea numérica y sin decimales para los cálculos
     df['Nivel'] = pd.to_numeric(df['Nivel'], errors='coerce').fillna(0).round(0).astype(int)
-    
-    # Convertir columna Fecha a objeto datetime para poder filtrar
     df['Fecha_dt'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y')
     
     st.subheader("🔍 Filtros e Historial")
@@ -79,17 +77,15 @@ if not df.empty:
     # --- TABLA DE ESTADÍSTICAS ---
     st.subheader("📊 Resumen de Estadísticas (Rango Seleccionado)")
     if not df_filtrado.empty:
-        # Calculamos y redondeamos a enteros
         promedio = int(round(df_filtrado["Nivel"].mean()))
         maximo = int(df_filtrado["Nivel"].max())
         minimo = int(df_filtrado["Nivel"].min())
-        total_registros = len(df_filtrado)
 
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Promedio", f"{promedio} mg/dL")
         m2.metric("Máxima", f"{maximo} mg/dL")
         m3.metric("Mínima", f"{minimo} mg/dL")
-        m4.metric("Registros", total_registros)
+        m4.metric("Registros", len(df_filtrado))
         
         # --- TABLA CON ESTILO ---
         def resaltar_niveles(val):
@@ -99,9 +95,15 @@ if not df.empty:
                 return f'color: {color}; font-weight: bold'
             except: return None
 
-        # Mostramos la tabla asegurando enteros en la visualización
         st.dataframe(df_filtrado.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
 
         # --- GRÁFICA DE EVOLUCIÓN ---
         st.subheader("📈 Tendencia en el tiempo")
-        df_grafica = df
+        df_grafica = df_filtrado.copy()
+        # Combinamos fecha y hora para el eje X
+        df_grafica['Fecha_Hora'] = df_grafica['Fecha'] + " " + df_grafica['Hora']
+        st.line_chart(df_grafica.set_index('Fecha_Hora')['Nivel'])
+    else:
+        st.warning("No hay datos en el rango de fechas seleccionado.")
+else:
+    st.info("Aún no hay datos para mostrar.")
