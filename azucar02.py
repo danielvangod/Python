@@ -32,21 +32,32 @@ with st.form("registro_glucosa"):
     nivel = st.number_input("Nivel de azúcar (mg/dL)", min_value=0, step=1)
     
     btn_guardar = st.form_submit_button("Guardar en la Nube")
-
-    if btn_guardar:
-        # Preparamos el nuevo registro
+if btn_guardar:
+        # 1. Crear el nuevo registro como un DataFrame
         nuevo_dato = pd.DataFrame({
             "Fecha": [fecha.strftime("%d/%m/%Y")],
             "Hora": [hora.strftime("%H:%M")],
-            "Nivel": [nivel]
+            "Nivel": [int(nivel)] # Aseguramos que sea un número entero
         })
         
-        # Concatenamos y subimos a Google Sheets
-        df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
-        conn.update(data=df_actualizado)
+        # 2. Combinar con los datos existentes (si los hay)
+        if df is not None and not df.empty:
+            # Quitamos columnas vacías o extrañas que se cuelan a veces
+            df_limpio = df.dropna(how='all')
+            df_actualizado = pd.concat([df_limpio, nuevo_dato], ignore_index=True)
+        else:
+            df_actualizado = nuevo_dato
         
-        st.success(f"Registrado con éxito (Hora local: {hora.strftime('%H:%M')})")
-        st.rerun()
+        # 3. Limpiar el DataFrame antes de subirlo para evitar el UnsupportedOperationError
+        # Esto asegura que solo enviamos datos reales
+        df_actualizado = df_actualizado.astype(str) 
+        
+        try:
+            conn.update(data=df_actualizado)
+            st.success(f"✅ Registrado con éxito en la nube")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error al guardar: {e}")
 
 # --- VISUALIZACIÓN ---
 st.divider()
