@@ -15,7 +15,7 @@ st.set_page_config(page_title="Bitácora de Glucosa", page_icon="🩸", layout="
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-st.title("Bitácora - Paciente: Armando Valencia")
+st.title("Bitácora - Paciente: Armando Valencia Maldonado")
 
 # --- FORMULARIO DE REGISTRO ---
 with st.form("registro_glucosa"):
