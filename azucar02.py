@@ -19,7 +19,7 @@ st.title("Bitácora - Paciente: Armando Valencia Maldonado")
 
 # --- FORMULARIO DE REGISTRO ---
 with st.form("registro_glucosa"):
-    st.subheader("Nueva Medición")
+    st.subheader("Registro de Tomas de Glucosa")
     
     col1, col2, col3 = st.columns(3)
     with col1:
