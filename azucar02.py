@@ -27,10 +27,10 @@ with st.form("registro_glucosa"):
     with col2:
         hora = st.time_input("Hora", ahora_gt.time())
     with col3:
-        # NUEVA ETIQUETA DE CONTEXTO
         momento = st.selectbox("Momento de la toma", 
                               ["Ayunas", "Antes de comer", "Después de comer (2h)", "Antes de dormir", "Otro"])
     
+    # Usamos step=1 para que el selector solo sugiera enteros
     nivel = st.number_input("Nivel de azúcar (mg/dL)", min_value=0, step=1)
     
     btn_guardar = st.form_submit_button("Guardar en la Nube")
@@ -39,8 +39,8 @@ with st.form("registro_glucosa"):
         nuevo_dato = pd.DataFrame({
             "Fecha": [fecha.strftime("%d/%m/%Y")],
             "Hora": [hora.strftime("%H:%M")],
-            "Momento": [momento], # Nueva columna
-            "Nivel": [int(nivel)]
+            "Momento": [momento],
+            "Nivel": [int(round(nivel))] # Redondeamos al guardar
         })
         
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
@@ -48,9 +48,9 @@ with st.form("registro_glucosa"):
         
         if nivel < 140:
             st.balloons()
-            st.success(f"✅ ¡Felicidades! Tu nivel de {nivel} mg/dL es excelente.")
+            st.success(f"✅ ¡Felicidades! Tu nivel de {int(nivel)} mg/dL es excelente.")
         else:
-            st.warning(f"⚠️ Atención: Tu nivel es de {nivel} mg/dL. Controla tu alimentación.")
+            st.warning(f"⚠️ Atención: Tu nivel es de {int(nivel)} mg/dL. Controla tu alimentación.")
         
         time.sleep(2)
         st.rerun()
@@ -59,32 +59,34 @@ with st.form("registro_glucosa"):
 st.divider()
 
 if not df.empty:
+    # Aseguramos que la columna Nivel sea numérica y sin decimales para los cálculos
+    df['Nivel'] = pd.to_numeric(df['Nivel'], errors='coerce').fillna(0).round(0).astype(int)
+    
     # Convertir columna Fecha a objeto datetime para poder filtrar
     df['Fecha_dt'] = pd.to_datetime(df['Fecha'], format='%d/%m/%Y')
     
     st.subheader("🔍 Filtros e Historial")
     
-    # Selector de rango de fechas
     col_f1, col_f2 = st.columns(2)
     with col_f1:
         fecha_inicio = st.date_input("Desde", ahora_gt.date() - timedelta(days=7))
     with col_f2:
         fecha_fin = st.date_input("Hasta", ahora_gt.date())
 
-    # Filtrar el DataFrame
     mask = (df['Fecha_dt'].dt.date >= fecha_inicio) & (df['Fecha_dt'].dt.date <= fecha_fin)
     df_filtrado = df.loc[mask].drop(columns=['Fecha_dt'])
 
-    # --- TABLA DE ESTADÍSTICAS (RESUMEN) ---
+    # --- TABLA DE ESTADÍSTICAS ---
     st.subheader("📊 Resumen de Estadísticas (Rango Seleccionado)")
     if not df_filtrado.empty:
-        promedio = df_filtrado["Nivel"].mean()
-        maximo = df_filtrado["Nivel"].max()
-        minimo = df_filtrado["Nivel"].min()
+        # Calculamos y redondeamos a enteros
+        promedio = int(round(df_filtrado["Nivel"].mean()))
+        maximo = int(df_filtrado["Nivel"].max())
+        minimo = int(df_filtrado["Nivel"].min())
         total_registros = len(df_filtrado)
 
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Promedio", f"{promedio:.1f} mg/dL")
+        m1.metric("Promedio", f"{promedio} mg/dL")
         m2.metric("Máxima", f"{maximo} mg/dL")
         m3.metric("Mínima", f"{minimo} mg/dL")
         m4.metric("Registros", total_registros)
@@ -97,15 +99,9 @@ if not df.empty:
                 return f'color: {color}; font-weight: bold'
             except: return None
 
+        # Mostramos la tabla asegurando enteros en la visualización
         st.dataframe(df_filtrado.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
 
         # --- GRÁFICA DE EVOLUCIÓN ---
         st.subheader("📈 Tendencia en el tiempo")
-        # Preparamos los datos para la gráfica
-        df_grafica = df_filtrado.copy()
-        df_grafica['Fecha_Hora'] = df_grafica['Fecha'] + " " + df_grafica['Hora']
-        st.line_chart(df_grafica.set_index('Fecha_Hora')['Nivel'])
-    else:
-        st.warning("No hay datos en el rango de fechas seleccionado.")
-else:
-    st.info("Aún no hay datos para mostrar.")
+        df_grafica = df
