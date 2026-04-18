@@ -23,8 +23,8 @@ edad = ahora_gt.year - fecha_nacimiento.year - ((ahora_gt.month, ahora_gt.day) <
 with st.sidebar:
     st.header("📊 Valores de Referencia")
     st.info("**Bajo:** ≤ 105 mg/dL")
-    st.success("**Aceptable:** 106 - 120 mg/dL")
-    st.warning("**Cuidar salud:** > 120 mg/dL")
+    st.success("**Aceptable:** 106 - 140 mg/dL")
+    st.warning("**Cuidar salud:** > 140 mg/dL")
     
     st.divider()
     
@@ -35,11 +35,13 @@ with st.sidebar:
         st.write(f"**Edad:** {edad} años")
         
         if not df.empty:
-            ultima_toma = int(pd.to_numeric(df['Nivel'], errors='coerce').iloc[-1])
+            # Asegurar que el nivel sea numérico para extraer el último valor
+            df['Nivel'] = pd.to_numeric(df['Nivel'], errors='coerce').fillna(0)
+            ultima_toma = int(df['Nivel'].iloc[-1])
             st.write(f"**Última Glucosa:** {ultima_toma} mg/dL")
         
         st.write("**Contacto Emergencia:**")
-        st.code("66311963", language=None) # El formato code facilita copiarlo rápido
+        st.code("66311963", language=None)
     
     st.divider()
     st.caption("Sistema de monitoreo personalizado.")
@@ -49,11 +51,11 @@ nombre_paciente = "Armando Valencia Maldonado"
 titulo_base = f"Bitácora - Paciente: {nombre_paciente}"
 
 if not df.empty:
-    ultima_toma = int(pd.to_numeric(df['Nivel'], errors='coerce').iloc[-1])
+    ultima_toma = int(df['Nivel'].iloc[-1])
     
     if ultima_toma <= 105:
         color_titulo = "#3498db" # Azul
-    elif 106 <= ultima_toma <= 120:
+    elif 106 <= ultima_toma <= 140:
         color_titulo = "#27ae60" # Verde
     else:
         color_titulo = "#e74c3c" # Rojo
@@ -90,9 +92,10 @@ with st.form("registro_glucosa"):
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
         conn.update(data=df_actualizado)
         
+        # --- LÓGICA DE MENSAJES SEGÚN NUEVOS RANGOS ---
         if nivel <= 105:
             st.info(f"ℹ️ El nivel de {int(nivel)} mg/dL está muy bajo. Por favor, consulta con tu médico.")
-        elif 106 <= nivel <= 120:
+        elif 106 <= nivel <= 140:
             st.balloons()
             st.success(f"✅ ¡Excelente! Tu nivel de {int(nivel)} mg/dL es aceptable. ¡Sigue así!")
         else:
@@ -137,7 +140,7 @@ if not df.empty:
                 val_int = int(val)
                 if val_int <= 105:
                     return 'color: #3498db; font-weight: bold'
-                elif 106 <= val_int <= 120:
+                elif 106 <= val_int <= 140:
                     return 'color: #27ae60; font-weight: bold'
                 else:
                     return 'color: #e74c3c; font-weight: bold'
