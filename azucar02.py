@@ -25,7 +25,6 @@ with st.form("registro_glucosa"):
     with col1:
         fecha = st.date_input("Fecha", ahora_gt.date())
     with col2:
-        # El selector de Streamlit sigue siendo funcional, el formato cambia al guardar
         hora = st.time_input("Hora", ahora_gt.time())
     with col3:
         momento = st.selectbox("Momento de la toma", 
@@ -38,7 +37,6 @@ with st.form("registro_glucosa"):
     if btn_guardar:
         nuevo_dato = pd.DataFrame({
             "Fecha": [fecha.strftime("%d/%m/%Y")],
-            # CAMBIO AQUÍ: %I es hora 1-12, %M minutos, %p es AM/PM
             "Hora": [hora.strftime("%I:%M %p")], 
             "Momento": [momento],
             "Nivel": [int(round(nivel))]
@@ -47,13 +45,16 @@ with st.form("registro_glucosa"):
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
         conn.update(data=df_actualizado)
         
-        if nivel < 140:
+        # --- NUEVA LÓGICA DE MENSAJES SEGÚN RANGOS ---
+        if nivel <= 105:
+            st.info(f"ℹ️ El nivel de {int(nivel)} mg/dL está muy bajo. Por favor, consulta con tu médico.")
+        elif 106 <= nivel <= 120:
             st.balloons()
-            st.success(f"✅ ¡Felicidades! Tu nivel de {int(nivel)} mg/dL es excelente.")
+            st.success(f"✅ ¡Excelente! Tu nivel de {int(nivel)} mg/dL es aceptable. ¡Sigue así!")
         else:
-            st.warning(f"⚠️ Atención: Tu nivel es de {int(nivel)} mg/dL. Controla tu alimentación.")
+            st.warning(f"⚠️ Atención: Tu nivel es de {int(nivel)} mg/dL. Debes cuidar tu alimentación y hacer más ejercicio.")
         
-        time.sleep(2)
+        time.sleep(3)
         st.rerun()
 
 # --- SECCIÓN DE FILTROS Y ESTADÍSTICAS ---
@@ -87,12 +88,16 @@ if not df.empty:
         m3.metric("Mínima", f"{minimo} mg/dL")
         m4.metric("Registros", len(df_filtrado))
         
-        # --- TABLA CON ESTILO ---
+        # --- TABLA CON ESTILO DE COLORES ACTUALIZADO ---
         def resaltar_niveles(val):
             try:
                 val_int = int(val)
-                color = 'red' if val_int >= 140 else 'green'
-                return f'color: {color}; font-weight: bold'
+                if val_int <= 105:
+                    return 'color: #3498db; font-weight: bold' # Azul para bajo
+                elif 106 <= val_int <= 120:
+                    return 'color: #27ae60; font-weight: bold' # Verde para aceptable
+                else:
+                    return 'color: #e74c3c; font-weight: bold' # Rojo para alto (>120)
             except: return None
 
         st.dataframe(df_filtrado.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
@@ -100,7 +105,6 @@ if not df.empty:
         # --- GRÁFICA DE EVOLUCIÓN ---
         st.subheader("📈 Tendencia en el tiempo")
         df_grafica = df_filtrado.copy()
-        # Combinamos fecha y hora para el eje X
         df_grafica['Fecha_Hora'] = df_grafica['Fecha'] + " " + df_grafica['Hora']
         st.line_chart(df_grafica.set_index('Fecha_Hora')['Nivel'])
     else:
