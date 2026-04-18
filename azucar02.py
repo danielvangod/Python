@@ -15,14 +15,34 @@ st.set_page_config(page_title="Bitácora de Glucosa", page_icon="🩸", layout="
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-# --- BARRA LATERAL (SIDEBAR) CON MÉTRICAS DE REFERENCIA ---
+# --- CÁLCULO DE EDAD ---
+fecha_nacimiento = datetime(1966, 8, 12)
+edad = ahora_gt.year - fecha_nacimiento.year - ((ahora_gt.month, ahora_gt.day) < (fecha_nacimiento.month, fecha_nacimiento.day))
+
+# --- BARRA LATERAL (SIDEBAR) ---
 with st.sidebar:
     st.header("📊 Valores de Referencia")
     st.info("**Bajo:** ≤ 105 mg/dL")
     st.success("**Aceptable:** 106 - 120 mg/dL")
     st.warning("**Cuidar salud:** > 120 mg/dL")
+    
     st.divider()
-    st.caption("Nota: Estas métricas son personalizadas para el seguimiento de este registro.")
+    
+    # CUADRO DE INFORMACIÓN DEL PACIENTE
+    st.header("👤 Ficha del Paciente")
+    with st.container(border=True):
+        st.write(f"**Nombre:** Armando Valencia Maldonado")
+        st.write(f"**Edad:** {edad} años")
+        
+        if not df.empty:
+            ultima_toma = int(pd.to_numeric(df['Nivel'], errors='coerce').iloc[-1])
+            st.write(f"**Última Glucosa:** {ultima_toma} mg/dL")
+        
+        st.write("**Contacto Emergencia:**")
+        st.code("66311963", language=None) # El formato code facilita copiarlo rápido
+    
+    st.divider()
+    st.caption("Sistema de monitoreo personalizado.")
 
 # --- LÓGICA PARA EL TÍTULO DINÁMICO ---
 nombre_paciente = "Armando Valencia Maldonado"
