@@ -9,13 +9,13 @@ import pytz # Librería para manejo de zonas horarias
 zona_gt = pytz.timezone('America/Guatemala')
 ahora_gt = datetime.now(zona_gt)
 
-st.set_page_config(page_title="Control Glucosa GT", page_icon="🩸")
+st.set_page_config(page_title="Control Glucosa - Armando Valencia", page_icon="🩸")
 
 # Conexión a Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-st.title("Control de Glucosa - Guatemala 🇬🇹")
+st.title("Control de Glucosa - Armando Valencia")
 
 # --- FORMULARIO ---
 with st.form("registro_glucosa"):
