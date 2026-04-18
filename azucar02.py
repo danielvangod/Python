@@ -32,7 +32,7 @@ with st.form("registro_glucosa"):
     
     nivel = st.number_input("Nivel de azúcar (mg/dL)", min_value=0, step=1)
     
-    btn_guardar = st.form_submit_button("Guardar en la Nube")
+    btn_guardar = st.form_submit_button("Guardar Registro de toma")
 
     if btn_guardar:
         nuevo_dato = pd.DataFrame({
