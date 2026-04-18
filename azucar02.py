@@ -28,14 +28,12 @@ with st.sidebar:
     
     st.divider()
     
-    # CUADRO DE INFORMACIÓN DEL PACIENTE
     st.header("👤 Ficha del Paciente")
     with st.container(border=True):
         st.write(f"**Nombre:** Armando Valencia Maldonado")
         st.write(f"**Edad:** {edad} años")
         
         if not df.empty:
-            # Asegurar que el nivel sea numérico para extraer el último valor
             df['Nivel'] = pd.to_numeric(df['Nivel'], errors='coerce').fillna(0)
             ultima_toma = int(df['Nivel'].iloc[-1])
             st.write(f"**Última Glucosa:** {ultima_toma} mg/dL")
@@ -54,11 +52,11 @@ if not df.empty:
     ultima_toma = int(df['Nivel'].iloc[-1])
     
     if ultima_toma <= 105:
-        color_titulo = "#3498db" # Azul
+        color_titulo = "#3498db"
     elif 106 <= ultima_toma <= 140:
-        color_titulo = "#27ae60" # Verde
+        color_titulo = "#27ae60"
     else:
-        color_titulo = "#e74c3c" # Rojo
+        color_titulo = "#e74c3c"
     
     st.markdown(f"<h1>{titulo_base} - <span style='color:{color_titulo}'>{ultima_toma} mg/dL</span></h1>", unsafe_allow_html=True)
 else:
@@ -92,7 +90,6 @@ with st.form("registro_glucosa"):
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
         conn.update(data=df_actualizado)
         
-        # --- LÓGICA DE MENSAJES SEGÚN NUEVOS RANGOS ---
         if nivel <= 105:
             st.info(f"ℹ️ El nivel de {int(nivel)} mg/dL está muy bajo. Por favor, consulta con tu médico.")
         elif 106 <= nivel <= 140:
@@ -120,33 +117,49 @@ if not df.empty:
         fecha_fin = st.date_input("Hasta", ahora_gt.date())
 
     mask = (df['Fecha_dt'].dt.date >= fecha_inicio) & (df['Fecha_dt'].dt.date <= fecha_fin)
-    df_filtrado = df.loc[mask].drop(columns=['Fecha_dt'])
+    df_filtrado = df.loc[mask].copy()
 
-    # --- TABLA DE ESTADÍSTICAS ---
+    # --- TABLA DE ESTADÍSTICAS CON SUBTÍTULOS ---
     st.subheader("📊 Resumen de Estadísticas")
     if not df_filtrado.empty:
         promedio = int(round(df_filtrado["Nivel"].mean()))
-        maximo = int(df_filtrado["Nivel"].max())
-        minimo = int(df_filtrado["Nivel"].min())
+        
+        # Datos Máxima
+        fila_max = df_filtrado.loc[df_filtrado["Nivel"].idxmax()]
+        max_valor = int(fila_max["Nivel"])
+        max_info = f"{fila_max['Fecha']} - {fila_max['Momento']}"
+        
+        # Datos Mínima
+        fila_min = df_filtrado.loc[df_filtrado["Nivel"].idxmin()]
+        min_valor = int(fila_min["Nivel"])
+        min_info = f"{fila_min['Fecha']} - {fila_min['Momento']}"
 
+        # Fila de métricas
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Promedio", f"{promedio} mg/dL")
-        m2.metric("Máxima", f"{maximo} mg/dL")
-        m3.metric("Mínima", f"{minimo} mg/dL")
+        m2.metric("Máxima", f"{max_valor} mg/dL")
+        m3.metric("Mínima", f"{min_valor} mg/dL")
         m4.metric("Registros", len(df_filtrado))
         
+        # Fila de subtítulos (Letra pequeña abajo de las métricas)
+        # Usamos st.markdown con HTML para el tamaño de letra
+        c1, c2, c3, c4 = st.columns(4)
+        with c2:
+            st.markdown(f"<p style='font-size: 13px; color: gray; margin-top: -20px;'>{max_info}</p>", unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"<p style='font-size: 13px; color: gray; margin-top: -20px;'>{min_info}</p>", unsafe_allow_html=True)
+        
+        st.divider()
+
         def resaltar_niveles(val):
             try:
                 val_int = int(val)
-                if val_int <= 105:
-                    return 'color: #3498db; font-weight: bold'
-                elif 106 <= val_int <= 140:
-                    return 'color: #27ae60; font-weight: bold'
-                else:
-                    return 'color: #e74c3c; font-weight: bold'
+                if val_int <= 105: return 'color: #3498db; font-weight: bold'
+                elif 106 <= val_int <= 140: return 'color: #27ae60; font-weight: bold'
+                else: return 'color: #e74c3c; font-weight: bold'
             except: return None
 
-        st.dataframe(df_filtrado.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
+        st.dataframe(df_filtrado.drop(columns=['Fecha_dt']).style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
 
         st.subheader("📈 Tendencia en el tiempo")
         df_grafica = df_filtrado.copy()
