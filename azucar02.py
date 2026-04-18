@@ -15,7 +15,32 @@ st.set_page_config(page_title="Bitácora de Glucosa", page_icon="🩸", layout="
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-st.title("Bitácora - Paciente: Armando Valencia Maldonado")
+# --- BARRA LATERAL (SIDEBAR) CON MÉTRICAS DE REFERENCIA ---
+with st.sidebar:
+    st.header("📊 Valores de Referencia")
+    st.info("**Bajo:** ≤ 105 mg/dL")
+    st.success("**Aceptable:** 106 - 120 mg/dL")
+    st.warning("**Cuidar salud:** > 120 mg/dL")
+    st.divider()
+    st.caption("Nota: Estas métricas son personalizadas para el seguimiento de este registro.")
+
+# --- LÓGICA PARA EL TÍTULO DINÁMICO ---
+nombre_paciente = "Armando Valencia Maldonado"
+titulo_base = f"Bitácora - Paciente: {nombre_paciente}"
+
+if not df.empty:
+    ultima_toma = int(pd.to_numeric(df['Nivel'], errors='coerce').iloc[-1])
+    
+    if ultima_toma <= 105:
+        color_titulo = "#3498db" # Azul
+    elif 106 <= ultima_toma <= 120:
+        color_titulo = "#27ae60" # Verde
+    else:
+        color_titulo = "#e74c3c" # Rojo
+    
+    st.markdown(f"<h1>{titulo_base} - <span style='color:{color_titulo}'>{ultima_toma} mg/dL</span></h1>", unsafe_allow_html=True)
+else:
+    st.title(titulo_base)
 
 # --- FORMULARIO DE REGISTRO ---
 with st.form("registro_glucosa"):
@@ -45,7 +70,6 @@ with st.form("registro_glucosa"):
         df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
         conn.update(data=df_actualizado)
         
-        # --- NUEVA LÓGICA DE MENSAJES SEGÚN RANGOS ---
         if nivel <= 105:
             st.info(f"ℹ️ El nivel de {int(nivel)} mg/dL está muy bajo. Por favor, consulta con tu médico.")
         elif 106 <= nivel <= 120:
@@ -76,7 +100,7 @@ if not df.empty:
     df_filtrado = df.loc[mask].drop(columns=['Fecha_dt'])
 
     # --- TABLA DE ESTADÍSTICAS ---
-    st.subheader("📊 Resumen de Estadísticas (Rango Seleccionado)")
+    st.subheader("📊 Resumen de Estadísticas")
     if not df_filtrado.empty:
         promedio = int(round(df_filtrado["Nivel"].mean()))
         maximo = int(df_filtrado["Nivel"].max())
@@ -88,21 +112,19 @@ if not df.empty:
         m3.metric("Mínima", f"{minimo} mg/dL")
         m4.metric("Registros", len(df_filtrado))
         
-        # --- TABLA CON ESTILO DE COLORES ACTUALIZADO ---
         def resaltar_niveles(val):
             try:
                 val_int = int(val)
                 if val_int <= 105:
-                    return 'color: #3498db; font-weight: bold' # Azul para bajo
+                    return 'color: #3498db; font-weight: bold'
                 elif 106 <= val_int <= 120:
-                    return 'color: #27ae60; font-weight: bold' # Verde para aceptable
+                    return 'color: #27ae60; font-weight: bold'
                 else:
-                    return 'color: #e74c3c; font-weight: bold' # Rojo para alto (>120)
+                    return 'color: #e74c3c; font-weight: bold'
             except: return None
 
         st.dataframe(df_filtrado.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
 
-        # --- GRÁFICA DE EVOLUCIÓN ---
         st.subheader("📈 Tendencia en el tiempo")
         df_grafica = df_filtrado.copy()
         df_grafica['Fecha_Hora'] = df_grafica['Fecha'] + " " + df_grafica['Hora']
