@@ -105,8 +105,3 @@ with st.form("formulario_cloud"):
 
 st.subheader("Historial Sincronizado")
 st.dataframe(df, use_container_width=True)
-
-streamlit
-pandas
-matplotlib
-st-gsheets-connection
