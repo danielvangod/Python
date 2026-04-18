@@ -2,69 +2,76 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
-import pytz # Librería para manejo de zonas horarias
+import pytz
+import time
 
-# --- CONFIGURACIÓN DE TIEMPO LOCAL ---
-# Definimos la zona horaria de Guatemala
+# --- CONFIGURACIÓN DE TIEMPO LOCAL (GUATEMALA) ---
 zona_gt = pytz.timezone('America/Guatemala')
 ahora_gt = datetime.now(zona_gt)
 
-st.set_page_config(page_title="Control Glucosa - Armando Valencia", page_icon="🩸")
+st.set_page_config(page_title="Control Glucosa GT", page_icon="🩸")
 
-# Conexión a Google Sheets
+# --- CONEXIÓN A GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl="0")
 
-st.title("Control de Glucosa - Armando Valencia")
+st.title("Control de Glucosa - Guatemala 🇬🇹")
 
-# --- FORMULARIO ---
+# --- FORMULARIO DE REGISTRO ---
 with st.form("registro_glucosa"):
     st.subheader("Nueva Medición")
     
     col1, col2 = st.columns(2)
     with col1:
-        # El calendario se abre con la fecha actual de GT
         fecha = st.date_input("Fecha", ahora_gt.date())
     with col2:
-        # El reloj inicia con la hora exacta de GT
         hora = st.time_input("Hora", ahora_gt.time())
     
     nivel = st.number_input("Nivel de azúcar (mg/dL)", min_value=0, step=1)
     
     btn_guardar = st.form_submit_button("Guardar en la Nube")
-if btn_guardar:
-        # 1. Crear el nuevo registro como un DataFrame
+
+    if btn_guardar:
         nuevo_dato = pd.DataFrame({
             "Fecha": [fecha.strftime("%d/%m/%Y")],
             "Hora": [hora.strftime("%H:%M")],
-            "Nivel": [int(nivel)] # Aseguramos que sea un número entero
+            "Nivel": [int(nivel)]
         })
         
-        # 2. Combinar con los datos existentes (si los hay)
-        if df is not None and not df.empty:
-            # Quitamos columnas vacías o extrañas que se cuelan a veces
-            df_limpio = df.dropna(how='all')
-            df_actualizado = pd.concat([df_limpio, nuevo_dato], ignore_index=True)
+        # Sincronización con la nube
+        df_actualizado = pd.concat([df, nuevo_dato], ignore_index=True)
+        conn.update(data=df_actualizado)
+        
+        # --- LÓGICA DE MENSAJES ---
+        if nivel < 140:
+            st.balloons()
+            st.success(f"✅ ¡Felicidades! Tu nivel de {nivel} mg/dL está en un rango excelente. ¡Sigue así!")
         else:
-            df_actualizado = nuevo_dato
+            st.warning(f"⚠️ Atención: Tu nivel es de {nivel} mg/dL. Es importante controlar tu glucosa y seguir indicaciones médicas.")
         
-        # 3. Limpiar el DataFrame antes de subirlo para evitar el UnsupportedOperationError
-        # Esto asegura que solo enviamos datos reales
-        df_actualizado = df_actualizado.astype(str) 
-        
-        try:
-            conn.update(data=df_actualizado)
-            st.success(f"✅ Registrado con éxito en la nube")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Error al guardar: {e}")
+        time.sleep(3)
+        st.rerun()
 
-# --- VISUALIZACIÓN ---
+# --- VISUALIZACIÓN CON ESTILO ---
 st.divider()
-st.subheader("Historial Sincronizado")
-st.dataframe(df, use_container_width=True)
+st.subheader("Historial de Registros")
 
-# Gráfica de tendencia
 if not df.empty:
-    st.subheader("Gráfica de Evolución")
-    st.line_chart(df.set_index("Fecha")["Nivel"])
+    # Función para aplicar colores a la columna 'Nivel'
+    def resaltar_niveles(val):
+        try:
+            val_int = int(val)
+            color = 'red' if val_int >= 140 else 'green'
+            return f'color: {color}; font-weight: bold'
+        except:
+            return None
+
+    # Aplicamos el estilo a la tabla
+    # Nota: Usamos .style para que se vea profesional
+    st.dataframe(df.style.map(resaltar_niveles, subset=['Nivel']), use_container_width=True)
+
+    # Gráfica de línea rápida
+    st.subheader("Tendencia")
+    st.line_chart(df["Nivel"])
+else:
+    st.info("Aún no hay datos para mostrar.")
